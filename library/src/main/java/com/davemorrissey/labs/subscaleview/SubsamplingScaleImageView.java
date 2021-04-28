@@ -12,7 +12,8 @@ import android.graphics.Point;
 import android.graphics.PointF;
 import android.graphics.Rect;
 import android.graphics.RectF;
-import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.GradientDrawable;
 import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.Message;
@@ -300,7 +301,6 @@ public class SubsamplingScaleImageView extends View {
         }
 
         quickScaleThreshold = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 20, context.getResources().getDisplayMetrics());
-        setBackground(new ColorDrawable(Color.MAGENTA));
     }
 
     public SubsamplingScaleImageView(Context context) {
@@ -997,6 +997,11 @@ public class SubsamplingScaleImageView extends View {
 
         }
 
+        if (bitmap != null) {
+            AutomaticBackgroundTask task = new AutomaticBackgroundTask(this);
+            execute(task);
+        }
+
         if (debug) {
             canvas.drawText("Scale: " + String.format(Locale.ENGLISH, "%.2f", scale) + " (" + String.format(Locale.ENGLISH, "%.2f", minScale()) + " - " + String.format(Locale.ENGLISH, "%.2f", maxScale) + ")", px(5), px(15), debugTextPaint);
             canvas.drawText("Translate: " + String.format(Locale.ENGLISH, "%.2f", vTranslate.x) + ":" + String.format(Locale.ENGLISH, "%.2f", vTranslate.y), px(5), px(30), debugTextPaint);
@@ -1472,6 +1477,7 @@ public class SubsamplingScaleImageView extends View {
         this.bitmap = bitmap;
         this.sWidth = bitmap.getWidth();
         this.sHeight = bitmap.getHeight();
+
         boolean ready = checkReady();
         boolean imageLoaded = checkImageLoaded();
         if (ready || imageLoaded) {
@@ -2765,6 +2771,49 @@ public class SubsamplingScaleImageView extends View {
                     subsamplingScaleImageView.onImageEventListener.onTileLoadError(exception);
                 }
             }
+        }
+    }
+
+    private static class AutomaticBackgroundTask extends AsyncTask<Void, Void, Drawable> {
+
+        private final WeakReference<SubsamplingScaleImageView> viewRef;
+
+        AutomaticBackgroundTask(SubsamplingScaleImageView view) {
+            this.viewRef = new WeakReference<>(view);
+        }
+
+        @Override
+        protected Drawable doInBackground(Void... voids) {
+            // Get le colors
+            Bitmap bitmap = viewRef.get().bitmap;
+            int topPixel = bitmap.getPixel(0, 0);
+            int bottomPixel = bitmap.getPixel(0, bitmap.getHeight() - 1);
+
+            int topPixelGrayscale = (Color.red(topPixel) + Color.green(topPixel) + Color.blue(topPixel)) / 3;
+            int bottomPixelGrayscale = (Color.red(bottomPixel) + Color.green(bottomPixel) + Color.blue(bottomPixel)) / 3;
+
+            int topPixelColor = Color.WHITE;
+            if (topPixelGrayscale < 128) {
+                topPixelColor = Color.BLACK;
+            }
+
+            int bottomPixelColor = Color.WHITE;
+            if (bottomPixelGrayscale < 128) {
+                bottomPixelColor = Color.BLACK;
+            }
+
+            Log.d(TAG, "I have choosen top color " + topPixelColor + " and bottom color " + bottomPixelColor);
+
+            return new GradientDrawable(
+                    GradientDrawable.Orientation.TOP_BOTTOM,
+                    new int[]{topPixelColor, topPixelColor, bottomPixelColor, bottomPixelColor}
+            );
+        }
+
+        @Override
+        protected void onPostExecute(Drawable drawable) {
+            Log.d(TAG, "I have completed the task");
+            viewRef.get().setBackground(drawable);
         }
     }
 
