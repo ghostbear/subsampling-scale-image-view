@@ -12,6 +12,7 @@ import android.graphics.Point;
 import android.graphics.PointF;
 import android.graphics.Rect;
 import android.graphics.RectF;
+import android.graphics.drawable.ColorDrawable;
 import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.Message;
@@ -299,6 +300,7 @@ public class SubsamplingScaleImageView extends View {
         }
 
         quickScaleThreshold = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 20, context.getResources().getDisplayMetrics());
+        setBackground(new ColorDrawable(Color.MAGENTA));
     }
 
     public SubsamplingScaleImageView(Context context) {
